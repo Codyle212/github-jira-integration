@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask,request,jsonify
 import os
 from dotenv import load_dotenv
 import requests
@@ -17,48 +17,59 @@ port = 5000
 
 @app.route("/createJIRA", methods=['POST'])
 def create_jira():
-        headers = {
-    "Accept": "application/json",
-    "Content-Type": "application/json"
+
+    event = json.loads(request.data)
+    if event['comment']['body'] != '/jira':
+        respone = jsonify({"message":"No JIRA ticket created based on this comment"})
+        respone.status_code = 200
+        return respone
+
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
     }
 
-    payload = json.dumps( {
-    "fields": {
-        "description": {
-        "content": [
-            {
+    payload = json.dumps({
+        "fields": {
+            "description": {
             "content": [
                 {
-                "text": "My first Jira Ticket",
-                "type": "text"
+                "content": [
+                    {
+                    "text": "My first Jira Ticket",
+                    "type": "text"
+                    }
+                ],
+                "type": "paragraph"
                 }
             ],
-            "type": "paragraph"
-            }
-        ],
-        "type": "doc",
-        "version": 1
+            "type": "doc",
+            "version": 1
+            },
+            "issuetype": {
+            "id": "10007"
+            },
+            "project": {
+            "key": "GIC"
+            },
+            "summary": "First Jira Ticket",
         },
-        "issuetype": {
-        "id": "10007"
-        },
-        "project": {
-        "key": "GIC"
-        },
-        "summary": "First Jira Ticket",
-    },
-    "update": {}
-    } )
+        "update": {}
+    })
 
     response = requests.request(
-    "POST",
-    url,
-    data=payload,
-    headers=headers,
-    auth=auth
+        "POST",
+        url,
+        data=payload,
+        headers=headers,
+        auth=auth
     )
 
-    return json.dumps(json.loads(response.text), sort_keys=True, indent=4, separators=(",", ": "))
+    data = json.loads(response.text)
+    data['message']='Created Jira ticket base on the current issue'
+    response=jsonify(data)
+    response.status_code = 201
+    return response
     
 
 if __name__ == '__main__':
